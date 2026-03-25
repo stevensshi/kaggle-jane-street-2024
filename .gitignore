@@ -1,0 +1,32 @@
+data/
+submissions/
+*.csv
+*.parquet
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+*.egg-info/
+dist/
+build/
+.env
+venv/
+.venv/
+
+# Jupyter
+.jupyter/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/
+
+# Models / checkpoints
+models/
+*.pt
+*.pth
+*.pkl
+*.joblib
