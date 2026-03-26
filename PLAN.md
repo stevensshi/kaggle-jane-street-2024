@@ -1,0 +1,248 @@
+# Jane Street 2024 Kaggle Competition Plan (v2)
+
+## Data Split Strategy
+The competition has ended — no Kaggle submission available. We hold out a
+portion of the training data as a private test set to simulate the real
+evaluation. The split must respect temporal ordering (no future leakage).
+
+- **Train**: earliest dates (bulk of data)
+- **Validation**: middle/later dates (for CV, hyperparameter tuning)
+- **Holdout Test**: final dates (touched ONCE for final evaluation)
+- Exact date boundaries decided during EDA (Phase 2.3)
+- The holdout test set is never used for any model selection or tuning
+
+
+## Phase 1: Competition Understanding (DONE)
+
+### 1.1 Competition Rules
+- Task: Predict responder_6 (continuous) for each trading opportunity
+- Metric: Sample-weighted zero-mean R² (predicting zero = baseline)
+- Data: 47,127,338 rows, 1,699 days, 39 symbols, 10 partitions
+- 92 columns: date_id, time_id, symbol_id, weight, 79 features, 9 responders
+- Constraint: Real-time inference, ~16ms per iteration
+- At inference: current features visible, current responders hidden,
+  lagged responders from previous time slot available
+
+### 1.2 Key Challenges
+1. Non-stationarity — market regimes shift over time
+2. Low signal-to-noise ratio
+3. Fat-tailed distributions
+4. 16ms inference budget
+5. Multicollinearity among features
+
+
+## Phase 2: EDA & Data Validation (DONE)
+
+### 2.1 Data Integrity (DONE)
+- [x] All 10 partitions verified intact (47.1M rows total)
+- [x] Partition 9 re-extracted from zip (was truncated)
+- [x] Schema confirmed: 92 columns, correct types
+
+### 2.2 Distributions & Summary Statistics (DONE)
+- [x] Responder distributions: all ~zero mean, std 0.59-0.92, fat-tailed (kurt 5.8-24.4)
+- [x] Responder_6: mean=-0.002, std=0.89, skew=+0.47, kurt=6.86
+- [x] No nulls in any responders
+- [x] Feature distributions: no degenerate features (all std > 0.01)
+- [x] Extreme skew features: feature_47 (214!), feature_21 (151), feature_31 (131)
+- [x] Weight: mean=2.01, std=1.13, range [0.15, 10.24], right-skewed, no zeros
+- [x] High null features: 21/26/27/31 (~18%), 39/42/50/53 (~9%), 00/01 (~7%)
+
+### 2.3 Temporal Structure (DONE)
+- [x] Date range: 0-1698 (1699 days)
+- [x] Time slots/day: ~921 mean (range 849-968) — roughly constant
+- [x] Symbols/slot: ~30 mean (range 4-39) — varies
+- [x] Regime check: responder_6 std peaked mid-data (1.01 around dates 509-678),
+      lower at start/end (~0.81-0.87). Mean stays near zero.
+- [x] Feature stationarity: feature_24 biggest shift (z=1.08), features 00/02/03
+      shift together (correlated group), features 15/17/20/30 also drift
+- [x] Autocorrelation: lag_1=0.06 (weak but present), decays slowly
+- [x] **Data splits decided**:
+      Train: 0-1188 (1189 days), Val: 1189-1443 (255 days), Holdout: 1444-1698 (255 days)
+
+### 2.4 Feature-Target Relationships (DONE)
+- [x] Top features by |corr| with responder_6:
+      feature_06 (-0.047), feature_04 (-0.032), feature_07 (-0.030),
+      feature_36 (-0.023), feature_60 (+0.019)
+- [x] All top-15 features have stable signs (early vs late)
+- [x] Unstable features (sign flips): feature_14, feature_69, feature_48 — avoid
+- [x] Redundant feature groups: 21/31 (r=0.998), 77/78 (0.96), 75/76 (0.96),
+      73/74 (0.96), 00/02/03 (0.94), 34/35 (0.94), 15/17 (0.93)
+- [x] **Inter-responder**: responder_3 ↔ responder_6 = 0.73 (best auxiliary target),
+      responder_8 = 0.45, responder_7 = 0.43
+
+### 2.5 Lags File Analysis (DONE)
+- [x] Lags file: 39 rows × 12 cols — template with (date/time/symbol + 9 lag_1 responders)
+- [x] **lag1_responder_6 ↔ current responder_6: corr = 0.90** — dominant signal
+- [x] lag1_responder_3 also strong (0.76)
+- [x] **Naive baseline: predict lag1 → R² = 0.805, scaled → R² = 0.815 (scale=0.90)**
+- [x] This is the signal to beat — models should add value on top of this
+
+
+## Phase 3: Baseline Models
+
+### 3.1 Dumb Baselines
+- [ ] Predict zero → R² = 0.0 (by definition)
+- [ ] Predict responder_6_lag_1 → measure R²
+- [ ] Linear regression on top correlated features → R²
+
+### 3.2 LightGBM Baseline
+- [ ] Train LightGBM on all 79 features, zero-fill NaN
+- [ ] Time-series CV on train/validation split
+- [ ] Establish weighted R² score
+- [ ] Record training time and inference speed
+
+### 3.3 Feature Selection via LightGBM
+- [ ] Extract gain-based feature importance
+- [ ] Plot cumulative gain — find the "elbow"
+- [ ] Check split count for suspicious features (high split, low gain)
+- [ ] Retrain with top-N features only → compare CV to all-79
+- [ ] Stability check: run importance on early vs late dates
+      → keep only features important in BOTH periods
+- [ ] SHAP analysis on selected features for interpretability (optional)
+- [ ] Document final selected feature set with rationale
+
+### 3.4 Model Comparison
+- [ ] Ridge Regression on selected features → CV R²
+- [ ] XGBoost on selected features → CV R²
+- [ ] LightGBM on selected features → CV R²
+- [ ] Compare: training time, inference speed, CV R²
+- [ ] Determine: does tree-based beat linear? By how much?
+      → informs whether nonlinear interactions matter
+
+
+## Phase 4: Feature Engineering
+
+### 4.1 Market-Level Features
+- [ ] Per (date_id, time_id): mean, std of selected features across all symbols
+- [ ] Relative feature: feature_X - market_mean_X (deviation from market)
+
+### 4.2 Symbol-Level Rolling Features
+- [ ] Rolling mean/std of selected features (window sizes TBD from EDA)
+- [ ] Rolling mean of lagged responders
+- [ ] Rate of change features (current - rolling_mean)
+
+### 4.3 Lagged Responder Features
+- [ ] Use EDA from Phase 2.5 to decide which lagged responders to include
+- [ ] Test derived lag features (differences, ratios)
+
+### 4.4 Validate Engineering
+- [ ] Retrain LightGBM with selected + engineered features
+- [ ] Compare CV to Phase 3 baseline — keep only what improves CV
+- [ ] Record final feature set
+
+
+## Phase 5: Neural Network
+
+### 5.1 Architecture Selection
+- [ ] Start with simple MLP baseline on selected features
+- [ ] Then GRU — treat one day as a sequence
+- [ ] Compare MLP vs GRU on same CV — does sequence modeling help?
+- [ ] Determine number of layers, hidden units via CV (don't pre-assume)
+
+### 5.2 Multi-Task Learning
+- [ ] Use EDA Phase 2.4 to decide which responders to use as auxiliary targets
+- [ ] Compare single-task (responder_6 only) vs multi-task → measure CV delta
+- [ ] Tune auxiliary loss weights via CV
+
+### 5.3 Training Setup
+- [ ] Decide training date range from EDA (stationarity analysis)
+- [ ] Preprocessing: standardize features, zero-fill NaN
+- [ ] Same temporal CV as Phase 3 for fair comparison
+- [ ] Experiment log: track every run (hyperparams, CV score, notes)
+
+### 5.4 Alternative Architectures (if time permits)
+- [ ] Smaller/larger GRU variants
+- [ ] MLP with residual connections
+- [ ] Compare all architectures on same CV
+
+
+## Phase 6: Online Learning
+
+### 6.1 Baseline Online Learning
+- [ ] Implement basic version: update on responder_6_lag_1 only,
+      all layers, fixed lr, SGD
+- [ ] Measure CV delta vs frozen model
+
+### 6.2 Target Selection
+- [ ] Test update on responder_6 only vs multiple responders vs all 9
+- [ ] If multi-task: tune relative weights of each responder's loss
+- [ ] Use Phase 2.4 correlations to guide which responders to try first
+
+### 6.3 Layer Selection
+- [ ] Test: update all layers vs last layer only vs last N layers
+- [ ] Measure CV and stability for each
+
+### 6.4 Learning Rate & Optimizer
+- [ ] Sweep lr (log scale, range TBD)
+- [ ] Compare SGD vs Adam for online updates
+- [ ] Test fixed lr vs decaying lr within a day
+
+### 6.5 Feature-Based Adaptation (non-gradient)
+- [ ] Add running statistics of lagged responders as input features
+      (EMA of recent responder values, rolling std)
+- [ ] Test: gradient-only vs feature-only vs both combined
+- [ ] Update feature normalization statistics online
+      (running mean/std to handle feature distribution shift)
+
+### 6.6 Day Boundary Handling
+- [ ] Test: keep adapted weights vs reset each morning
+- [ ] Use EDA (Phase 2.3) to inform — do regimes persist across days?
+- [ ] Test: reset GRU hidden state at day boundary vs carry forward
+
+### 6.7 Validation & Stability
+- [ ] Simulate full inference loop on validation days
+- [ ] Monitor: does model destabilize after 500+ updates?
+- [ ] Verify total inference time (update + predict) < 16ms
+- [ ] Test on multiple validation periods to confirm robustness
+
+
+## Phase 7: Ensemble & Final Evaluation
+
+### 7.1 Multi-Seed Ensemble
+- [ ] Train N seeds per best architecture
+- [ ] Simple average of predictions
+- [ ] Measure ensemble CV vs best single model
+
+### 7.2 Cross-Architecture Ensemble (if multiple models are competitive)
+- [ ] Blend different model types
+- [ ] Simple average or learned weights on validation set
+
+### 7.3 Inference Optimization
+- [ ] Profile end-to-end inference time per row
+- [ ] If > 16ms: TorchScript, reduce model size, Numba for preprocessing
+
+### 7.4 Holdout Test Evaluation
+- [ ] Run final model on holdout test set (ONE time only)
+- [ ] Report weighted R² on holdout
+- [ ] Compare holdout R² vs validation R² — if large gap, investigate
+- [ ] Document final results and lessons learned
+
+
+## Phase 8: Iteration
+- [ ] Analyze holdout results — where does the model fail?
+- [ ] Revisit feature engineering, training ranges, architectures
+- [ ] Re-evaluate on validation set (not holdout) for further tuning
+
+
+## Decision Points (decided by data, not pre-assumed)
+- Train/validation/holdout date boundaries → Phase 2.3
+- Which features to keep → Phase 3.3
+- Which responders are useful as auxiliary targets → Phase 2.4
+- What training date range to use → Phase 2.3
+- GRU vs MLP vs other → Phase 5.1
+- Online learning rate → Phase 6.4
+- Online learning targets → Phase 6.2
+- Online learning layers → Phase 6.3
+- Gradient vs feature-based adaptation → Phase 6.5
+- Day boundary reset policy → Phase 6.6
+- Ensemble composition → Phase 7
+
+
+## Technology Stack
+- Data: Polars, Pandas
+- Baseline: LightGBM, scikit-learn (Ridge)
+- Neural: PyTorch
+- Visualization: Matplotlib, Seaborn
+- Feature analysis: SHAP
+- Optimization: Numba, TorchScript
+- CV: Custom temporal split (no random splitting)
