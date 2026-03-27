@@ -113,25 +113,30 @@ Training: dates 900-1188 (9,998,472 rows), Validation: dates 1189-1443 (9,386,69
 - [x] All models well within 16ms inference budget
 
 
-## Phase 4: Feature Engineering
+## Phase 4: Feature Engineering (DONE)
 
-### 4.1 Market-Level Features
-- [ ] Per (date_id, time_id): mean, std of selected features across all symbols
-- [ ] Relative feature: feature_X - market_mean_X (deviation from market)
+Training: dates 900-1188 (9,998,472 rows), Validation: dates 1189-1443 (9,386,696 rows)
 
-### 4.2 Symbol-Level Rolling Features
-- [ ] Rolling mean/std of selected features (window sizes TBD from EDA)
-- [ ] Rolling mean of lagged responders
-- [ ] Rate of change features (current - rolling_mean)
+### 4.1 Market-Level Features (DONE)
+- [x] Per (date_id, time_id): mean of top 10 features + relative deviation (20 features)
+- [x] **No improvement vs lag-only**: −0.000282 R² — dropped from final feature set
 
-### 4.3 Lagged Responder Features
-- [ ] Use EDA from Phase 2.5 to decide which lagged responders to include
-- [ ] Test derived lag features (differences, ratios)
+### 4.2 Symbol-Level Rolling Features (DONE)
+- [x] Rolling mean (window=10) for top 10 features per symbol (10 features)
+- [x] **No improvement** — market conditions change too fast for rolling to add value
 
-### 4.4 Validate Engineering
-- [ ] Retrain LightGBM with selected + engineered features
-- [ ] Compare CV to Phase 3 baseline — keep only what improves CV
-- [ ] Record final feature set
+### 4.3 Lagged Responder Features (DONE)
+- [x] lag1_r6 (corr=0.90), lag1_r3 (0.76), lag1_r7 (0.42), lag1_r4 (0.36), lag1_r0 (−0.09)
+- [x] **Dominant signal**: lag1_r6 = 73% of LightGBM gain, lag1_r3 = 20%
+
+### 4.4 Validate Engineering (DONE)
+- [x] LightGBM (54 sel + 5 lag): Val R² = **0.856097** vs Phase 3 baseline 0.010782 (+79×!)
+- [x] Adding market + rolling (89 total): Val R² = 0.855815 (−0.000282 vs lag-only)
+- [x] **Final feature set: 59 features (54 selected + 5 lag responders)**
+
+Key insight: Lag features transform the problem. LightGBM+lag beats naive lag baseline
+(0.811) by +0.045 R² through learned interactions. Market and rolling features provide
+no measurable benefit beyond the lag signal.
 
 
 ## Phase 5: Neural Network
