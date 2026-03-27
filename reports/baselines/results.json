@@ -1,0 +1,151 @@
+{
+  "predict_zero": {
+    "r2": 0.0
+  },
+  "predict_lag1": {
+    "r2_raw": 0.801605,
+    "r2_scaled": 0.811445,
+    "scale": 0.9008
+  },
+  "ridge_top5": {
+    "r2": 0.002406,
+    "features": [
+      "feature_06",
+      "feature_04",
+      "feature_07",
+      "feature_36",
+      "feature_60"
+    ],
+    "train_time": 0.8
+  },
+  "ridge_all79": {
+    "r2": 0.00426,
+    "train_time": 6.58
+  },
+  "lgb_all79": {
+    "r2": 0.010825,
+    "r2_train": 0.044423,
+    "best_iteration": 111,
+    "train_time": 140.3,
+    "infer_ms": 0.137
+  },
+  "lgb_selected": {
+    "r2": 0.010782,
+    "n_features": 54,
+    "features": [
+      "feature_06",
+      "feature_61",
+      "feature_30",
+      "feature_36",
+      "feature_07",
+      "feature_04",
+      "feature_24",
+      "feature_31",
+      "feature_29",
+      "feature_20",
+      "feature_22",
+      "feature_21",
+      "feature_58",
+      "feature_08",
+      "feature_47",
+      "feature_01",
+      "feature_25",
+      "feature_28",
+      "feature_05",
+      "feature_60",
+      "feature_26",
+      "feature_23",
+      "feature_38",
+      "feature_72",
+      "feature_69",
+      "feature_27",
+      "feature_59",
+      "feature_33",
+      "feature_52",
+      "feature_15",
+      "feature_49",
+      "feature_66",
+      "feature_56",
+      "feature_14",
+      "feature_37",
+      "feature_34",
+      "feature_17",
+      "feature_42",
+      "feature_70",
+      "feature_77",
+      "feature_45",
+      "feature_13",
+      "feature_12",
+      "feature_53",
+      "feature_67",
+      "feature_78",
+      "feature_11",
+      "feature_57",
+      "feature_19",
+      "feature_65",
+      "feature_10",
+      "feature_16",
+      "feature_09",
+      "feature_18"
+    ],
+    "train_time": 121.4,
+    "best_iteration": 105
+  },
+  "feature_stability": {
+    "rank_correlation": 0.904,
+    "stable_features": [
+      "feature_01",
+      "feature_04",
+      "feature_05",
+      "feature_06",
+      "feature_07",
+      "feature_08",
+      "feature_20",
+      "feature_21",
+      "feature_22",
+      "feature_23",
+      "feature_24",
+      "feature_25",
+      "feature_26",
+      "feature_27",
+      "feature_28",
+      "feature_29",
+      "feature_30",
+      "feature_31",
+      "feature_33",
+      "feature_36",
+      "feature_37",
+      "feature_38",
+      "feature_47",
+      "feature_58",
+      "feature_60",
+      "feature_61",
+      "feature_69",
+      "feature_72"
+    ]
+  },
+  "model_comparison": {
+    "ridge": {
+      "r2": 0.004385,
+      "train_time": 5.63,
+      "infer_ms": 0.045
+    },
+    "xgboost": {
+      "r2": 0.010605,
+      "train_time": 107.9,
+      "infer_ms": 0.148,
+      "best_iteration": 141
+    },
+    "lightgbm": {
+      "r2": 0.010782,
+      "train_time": 121.4,
+      "infer_ms": 0.137
+    }
+  },
+  "metadata": {
+    "train_dates": "900-1188",
+    "val_dates": "1189-1443",
+    "train_rows": 9998472,
+    "val_rows": 9386696
+  }
+}
