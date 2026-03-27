@@ -78,36 +78,39 @@ evaluation. The split must respect temporal ordering (no future leakage).
 - [x] This is the signal to beat — models should add value on top of this
 
 
-## Phase 3: Baseline Models
+## Phase 3: Baseline Models (DONE)
+Training: dates 900-1188 (9,998,472 rows), Validation: dates 1189-1443 (9,386,696 rows)
 
-### 3.1 Dumb Baselines
-- [ ] Predict zero → R² = 0.0 (by definition)
-- [ ] Predict responder_6_lag_1 → measure R²
-- [ ] Linear regression on top correlated features → R²
+### 3.1 Dumb Baselines (DONE)
+- [x] Predict zero → R² = 0.000000 (by definition)
+- [x] Predict lag_1 (raw) → R² = 0.8016, scaled (s=0.90) → R² = 0.8114
+- [x] Ridge on top 5 features → R² = 0.0024
+- [x] Ridge on all 79 features → R² = 0.0043
+- [x] **Key insight: lag_1 dominates (R²=0.81). Feature-only models are 100× weaker.**
 
-### 3.2 LightGBM Baseline
-- [ ] Train LightGBM on all 79 features, zero-fill NaN
-- [ ] Time-series CV on train/validation split
-- [ ] Establish weighted R² score
-- [ ] Record training time and inference speed
+### 3.2 LightGBM Baseline (DONE)
+- [x] LightGBM (all 79 features): val R² = 0.0108, train R² = 0.0444
+- [x] Best iteration: 111 (early stopped from 2000)
+- [x] Overfit gap: 0.034 (train R² 4× higher — regularization needed)
+- [x] Train time: 140s, Inference: 0.137ms/row (well within 16ms budget)
 
-### 3.3 Feature Selection via LightGBM
-- [ ] Extract gain-based feature importance
-- [ ] Plot cumulative gain — find the "elbow"
-- [ ] Check split count for suspicious features (high split, low gain)
-- [ ] Retrain with top-N features only → compare CV to all-79
-- [ ] Stability check: run importance on early vs late dates
-      → keep only features important in BOTH periods
-- [ ] SHAP analysis on selected features for interpretability (optional)
-- [ ] Document final selected feature set with rationale
+### 3.3 Feature Selection via LightGBM (DONE)
+- [x] Top features by gain: feature_06 (5.4%), feature_61 (4.2%), feature_30 (3.4%),
+      feature_36 (3.3%), feature_07 (3.2%), feature_04 (3.0%)
+- [x] Elbow: 18 features → 50% gain, 40 → 80%, 54 → 90%, 63 → 95%
+- [x] Suspicious (low gain/split): feature_63, feature_55, feature_41, feature_00
+- [x] Stability (Spearman rank corr early vs late): 0.904 — very stable
+- [x] 28 features stable in top-30 of both halves
+- [x] **Selected 54 features (90% cumulative gain)**
+- [x] LightGBM (54 features): R² = 0.0108 — negligible loss vs all-79 (0.010782 vs 0.010825)
 
-### 3.4 Model Comparison
-- [ ] Ridge Regression on selected features → CV R²
-- [ ] XGBoost on selected features → CV R²
-- [ ] LightGBM on selected features → CV R²
-- [ ] Compare: training time, inference speed, CV R²
-- [ ] Determine: does tree-based beat linear? By how much?
-      → informs whether nonlinear interactions matter
+### 3.4 Model Comparison (DONE)
+- [x] Ridge (54 features): R² = 0.0044, train=5.6s, infer=0.045ms
+- [x] XGBoost (54 features): R² = 0.0106, train=108s, infer=0.148ms
+- [x] LightGBM (54 features): R² = 0.0108, train=121s, infer=0.137ms
+- [x] **Tree-based models beat Ridge by ~2.5× — nonlinear interactions matter**
+- [x] LightGBM ≈ XGBoost (LGB marginally better, similar speed)
+- [x] All models well within 16ms inference budget
 
 
 ## Phase 4: Feature Engineering
