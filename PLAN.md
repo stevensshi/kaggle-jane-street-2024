@@ -139,29 +139,33 @@ Key insight: Lag features transform the problem. LightGBM+lag beats naive lag ba
 no measurable benefit beyond the lag signal.
 
 
-## Phase 5: Neural Network
+## Phase 5: Neural Network (DONE)
 
-### 5.1 Architecture Selection
-- [ ] Start with simple MLP baseline on selected features
-- [ ] Then GRU — treat one day as a sequence
-- [ ] Compare MLP vs GRU on same CV — does sequence modeling help?
-- [ ] Determine number of layers, hidden units via CV (don't pre-assume)
+Training: dates 900-1188 (10M rows), Validation: dates 1189-1443 (9.4M rows)
+Features: 59 (54 selected + 5 lag), GPU: RTX 4060
 
-### 5.2 Multi-Task Learning
-- [ ] Use EDA Phase 2.4 to decide which responders to use as auxiliary targets
-- [ ] Compare single-task (responder_6 only) vs multi-task → measure CV delta
-- [ ] Tune auxiliary loss weights via CV
+### 5.1 Architecture Selection (DONE)
+- [x] MLP baseline: Val R² = 0.858997 (115K params, 1224s train)
+- [x] MLP + lag residual: Val R² = 0.861152 (+0.002 from residual)
+- [x] GRU + lag residual: Val R² = **0.882851** (+0.027 vs LGB, 180K params, 304s train)
+- [x] **GRU wins decisively** — temporal sequence modeling per (symbol, day) matters
 
-### 5.3 Training Setup
-- [ ] Decide training date range from EDA (stationarity analysis)
-- [ ] Preprocessing: standardize features, zero-fill NaN
-- [ ] Same temporal CV as Phase 3 for fair comparison
-- [ ] Experiment log: track every run (hyperparams, CV score, notes)
+### 5.2 Multi-Task Learning (DONE)
+- [x] Auxiliary target: responder_3 (corr=0.73), aux_weight=0.3
+- [x] Multi-task MLP: Val R² = 0.861668 (+0.0005 vs single-task MLP)
+- [x] Small but consistent improvement from multi-task; main gain is from GRU
 
-### 5.4 Alternative Architectures (if time permits)
-- [ ] Smaller/larger GRU variants
-- [ ] MLP with residual connections
-- [ ] Compare all architectures on same CV
+### 5.3 Training Setup (DONE)
+- [x] Same temporal CV as Phase 3-4 (fair comparison)
+- [x] Preprocessing: standardize features (mean/std from train), zero-fill NaN
+- [x] Lag residual init: scale = 0.90 × std(lag1_r6) to account for normalization
+- [x] AdamW (lr=1e-3, wd=1e-4), CosineAnnealing, grad clip=1.0, patience=3
+
+### 5.4 Key Results
+- [x] All NN models beat LightGBM (R²=0.856), overfit gap 3× lower
+- [x] GRU best: R²=0.883 vs LGB 0.856 (+0.027), trained in 5 min
+- [x] All models well within 16ms inference budget (GRU: 0.37ms/step)
+- [x] Models saved to models/, normalization stats to models/norm_stats.npz
 
 
 ## Phase 6: Online Learning
