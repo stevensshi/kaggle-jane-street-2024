@@ -31,7 +31,7 @@ from evaluate import weighted_r2
 # ─── Constants ───────────────────────────────────────────────────────────────
 
 TRAIN_PATH = str(
-    Path(__file__).resolve().parent.parent.parent.parent.parent
+    Path(__file__).resolve().parent.parent
     / "data" / "raw" / "train.parquet"
 )
 assert Path(TRAIN_PATH).exists(), f"Data not found: {TRAIN_PATH}"
